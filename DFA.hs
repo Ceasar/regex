@@ -17,11 +17,19 @@ module DFA where
  -}
 type State = Integer
 
-data DFA = DFA [State] [Char] (State -> Char -> State) State [State]
+data DFA a b = DFA [a] [b] (a -> b -> a) a [a]
 
-accepts :: DFA -> String -> Bool
+accepts :: Eq a => DFA a b -> [b] -> Bool
 accepts (DFA _ _ _ q fs) [] = q `elem` fs
 accepts (DFA qs a d q fs) (x:xs) = accepts (DFA qs a d (d q x) fs) xs
+
+{-
+cartesianProduct xs ys = [(x, y) | x <- xs, y <- ys]
+
+union :: DFA -> DFA -> DFA
+union (DFA qs a d q fs) (DFA rs b e r gs) = (DFA 
+-}
+
 
 -- Test functions
 
@@ -31,5 +39,5 @@ testTransition 1 'b' = 2
 testTransition 2 'a' = 2
 testTransition 2 'b' = 1
 
-testDFA :: DFA
+testDFA :: DFA State Char
 testDFA = DFA [1, 2] "ab" testTransition 1 [2]
