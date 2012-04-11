@@ -16,16 +16,21 @@ module DFA where
  -- set of accept states (F)
  -}
 
-data DFA a b = DFA [a] [b] (a -> b -> a) a [a]
+data DFA a b = DFA {states :: [a],
+                    alphabet :: [b],
+                    transition :: (a -> b -> a),
+                    start :: a,
+                    accept :: [a]}
 
-run :: DFA a b -> [b] -> [a]
-run _ [] = []
-run (DFA qs a d q fs) (x:xs) = r : run (DFA qs a d r fs) xs
-    where r = d q x
+run :: (a -> b -> a) -> a -> [b] -> [a]
+run _ _ [] = []
+run f e (x:xs) = q : run f q xs where q = f e x
+
+runDFA :: DFA a b -> [b] -> [a]
+runDFA dfa xs = run (transition dfa) (start dfa) xs
 
 accepts :: Eq a => DFA a b -> [b] -> Bool
-accepts (DFA _ _ _ q fs) [] = q `elem` fs
-accepts (DFA qs a d q fs) (x:xs) = accepts (DFA qs a d (d q x) fs) xs
+accepts dfa xs = last (runDFA dfa xs) `elem` (accept dfa)
 
 cartesianProduct :: [a] -> [b] -> [(a, b)]
 cartesianProduct xs ys = [(x, y) | x <- xs, y <- ys]
