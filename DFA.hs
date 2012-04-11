@@ -36,7 +36,13 @@ cartesianProduct :: [a] -> [b] -> [(a, b)]
 cartesianProduct xs ys = [(x, y) | x <- xs, y <- ys]
 
 union :: DFA a b -> DFA c b -> DFA (a, c) b
-union (DFA qs a d q fs) (DFA rs _ e r gs) = (DFA (cartesianProduct qs rs) a (\x c -> (d (fst x) c, e (snd x) c)) (q, r) ((cartesianProduct fs rs) ++ (cartesianProduct qs gs)))
+union (DFA qs a d q fs) (DFA rs _ e r gs) = (DFA xs z f x hs)
+    where
+        xs = (cartesianProduct qs rs)
+        z = a
+        f = (\s c -> (d (fst s) c, e (snd s) c))
+        x = (q, r)
+        hs = ((cartesianProduct fs rs) ++ (cartesianProduct qs gs))
 
 
 -- Test functions
