@@ -19,9 +19,9 @@ type State = Integer
 
 data DFA = DFA [State] [Char] (State -> Char -> State) State [State]
 
-run :: DFA -> String -> Bool
-run (DFA _ _ _ q fs) [] = q `elem` fs
-run (DFA qs a d q fs) (x:xs) = run (DFA qs a d (d q x) fs) xs
+accepts :: DFA -> String -> Bool
+accepts (DFA _ _ _ q fs) [] = q `elem` fs
+accepts (DFA qs a d q fs) (x:xs) = accepts (DFA qs a d (d q x) fs) xs
 
 -- Test functions
 
