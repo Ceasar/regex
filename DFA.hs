@@ -35,14 +35,23 @@ accepts dfa xs = last (runDFA dfa xs) `elem` (accept dfa)
 cartesianProduct :: [a] -> [b] -> [(a, b)]
 cartesianProduct xs ys = [(x, y) | x <- xs, y <- ys]
 
-union :: DFA a b -> DFA c b -> DFA (a, c) b
+union :: Eq a => Eq c => DFA a b -> DFA c b -> DFA (a, c) b
 union (DFA qs a d q fs) (DFA rs _ e r gs) = (DFA xs z f x hs)
     where
         xs = (cartesianProduct qs rs)
         z = a
         f = (\s c -> (d (fst s) c, e (snd s) c))
         x = (q, r)
-        hs = ((cartesianProduct fs rs) ++ (cartesianProduct qs gs))
+        hs = filter (\p -> (fst p) `elem` fs || (snd p) `elem` gs) (cartesianProduct qs rs)
+
+intersection :: Eq a => Eq c => DFA a b -> DFA c b -> DFA (a, c) b
+intersection (DFA qs a d q fs) (DFA rs _ e r gs) = (DFA xs z f x hs)
+    where
+        xs = (cartesianProduct qs rs)
+        z = a
+        f = (\s c -> (d (fst s) c, e (snd s) c))
+        x = (q, r)
+        hs = filter (\p -> (fst p) `elem` fs && (snd p) `elem` gs) (cartesianProduct qs rs)
 
 
 -- Test functions
