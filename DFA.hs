@@ -15,9 +15,13 @@ module DFA where
  -- start state (Q)
  -- set of accept states (F)
  -}
-type State = Integer
 
 data DFA a b = DFA [a] [b] (a -> b -> a) a [a]
+
+run :: DFA a b -> [b] -> [a]
+run _ [] = []
+run (DFA qs a d q fs) (x:xs) = r : run (DFA qs a d r fs) xs
+    where r = d q x
 
 accepts :: Eq a => DFA a b -> [b] -> Bool
 accepts (DFA _ _ _ q fs) [] = q `elem` fs
@@ -31,6 +35,7 @@ union (DFA qs a d q fs) (DFA rs _ e r gs) = (DFA (cartesianProduct qs rs) a (\x 
 
 
 -- Test functions
+type State = Integer
 
 testTransition :: State -> Char -> State
 testTransition 1 'a' = 1
