@@ -16,11 +16,11 @@ module DFA where
  -- set of accept states (F)
  -}
 
-data DFA a b = DFA {states :: [a],
-                    alphabet :: [b],
-                    transition :: (a -> b -> a),
-                    start :: a,
-                    accept :: [a]}
+data DFA a b = DFA { states     :: [a],
+                     alphabet   :: [b],
+                     transition :: (a -> b -> a),
+                     start      :: a,
+                     accept     :: [a] }
 
 run :: (a -> b -> a) -> a -> [b] -> [a]
 run _ _ [] = []
@@ -62,6 +62,7 @@ testTransition 1 'a' = 1
 testTransition 1 'b' = 2
 testTransition 2 'a' = 2
 testTransition 2 'b' = 1
+testTransition _ _   = 1
 
 testDFA :: DFA State Char
 testDFA = DFA [1, 2] "ab" testTransition 1 [2]
@@ -71,6 +72,8 @@ testTransition2 3 'a' = 3
 testTransition2 3 'b' = 4
 testTransition2 4 'a' = 3
 testTransition2 4 'b' = 3
+testTransition2 _ _   = 3
 
 testDFA2 :: DFA State Char
 testDFA2 = DFA [3, 4] "ab" testTransition2 3 [4]
+
