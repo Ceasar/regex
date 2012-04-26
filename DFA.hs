@@ -5,7 +5,6 @@
  - Ceasar Bautista, Adi Dahiya
  -}
 
-
 module DFA where
 
 
@@ -27,7 +26,6 @@ run :: (a -> b -> a) -> a -> [b] -> [a]
 run _ _ [] = []
 run t q (o:v) = t q o : run t q v
 
-
 runDFA :: DFA a b -> [b] -> [a]
 runDFA dfa xs = run (transition dfa) (start dfa) xs
 
@@ -41,23 +39,36 @@ cartesianProduct xs ys = [(x, y) | x <- xs, y <- ys]
 
 
 union :: Eq a => Eq c => DFA a b -> DFA c b -> DFA (a, c) b
-union (DFA qs a d q fs) (DFA rs _ e r gs) = (DFA xs z f x hs)
+union (DFA qs a d q fs) (DFA rs _ e r gs) = DFA xs z f x hs
     where
         xs = (cartesianProduct qs rs)
-        z = a
-        f = (\s c -> (d (fst s) c, e (snd s) c))
-        x = (q, r)
+        z  = a
+        f  = (\s c -> (d (fst s) c, e (snd s) c))
+        x  = (q, r)
         hs = filter (\p -> (fst p) `elem` fs || (snd p) `elem` gs) (cartesianProduct qs rs)
 
 
 intersection :: Eq a => Eq c => DFA a b -> DFA c b -> DFA (a, c) b
-intersection (DFA qs a d q fs) (DFA rs _ e r gs) = (DFA xs z f x hs)
+intersection (DFA qs a d q fs) (DFA rs _ e r gs) = DFA xs z f x hs
     where
         xs = (cartesianProduct qs rs)
-        z = a
-        f = (\s c -> (d (fst s) c, e (snd s) c))
-        x = (q, r)
+        z  = a
+        f  = (\s c -> (d (fst s) c, e (snd s) c))
+        x  = (q, r)
         hs = filter (\p -> (fst p) `elem` fs && (snd p) `elem` gs) (cartesianProduct qs rs)
+
+
+concatenate :: DFA a b -> DFA a b -> DFA a b
+concatenate (DFA qs a d q fs) (DFA rs _ e r gs) = DFA xs z f x hs
+    where
+        xs = qs ++ xs
+        z = a
+        f = (\s c -> undefined)
+        x = q
+        hs = gs
+
+kleene :: DFA a b -> DFA a b
+kleene (DFA qs a d q fs) = undefined
 
 
 -- Test functions
