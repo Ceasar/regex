@@ -7,6 +7,7 @@
 
 
 module NFA where
+import Control.Monad
 
 
 cartesianProduct :: [a] -> [b] -> [(a, b)]
@@ -19,17 +20,11 @@ data NFA a b = NFA { states     :: [a],
                      start      :: a,
                      accept     :: [a] }
 
-
-run :: (a -> b -> [a]) -> [b] -> a -> [a]
-run _ [] q = [q]
-run t (x:xs) q = foldr (++) [] (map (run t xs) (t q x))
-
 accepts :: Eq a => NFA a b -> [b] -> Bool
-accepts nfa w = any (`elem` (accept nfa)) (run (transition nfa) w (start nfa))
+accepts nfa = any (`elem` (accept nfa)) . foldM (transition nfa) (start nfa)
 
 
 --Test NFA
--- Empty string should be represented by _
 testTransition :: Int -> Char -> [Int]
 testTransition 1 'a' = [1]
 testTransition 1 'b' = [1, 2]
