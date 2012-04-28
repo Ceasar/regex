@@ -11,14 +11,6 @@ data Reg = Epsilon |
            deriving Eq
 
 
-literals :: Reg -> [Char]
-literals Epsilon        = []
-literals (Literal c)    = [c]
-literals (Or r1 r2)     = literals r1 ++ literals r2
-literals (Concat r1 r2)   = literals r1 ++ literals r2
-literals (Star r)       = literals r
-
-
 showReg :: Reg -> [Char]
 showReg Epsilon        = "@"
 showReg (Literal c)    = [c]
