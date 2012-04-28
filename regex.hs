@@ -4,19 +4,19 @@ import Data.List hiding (union)
 import Data.Set
 
 
-data Reg = Epsilon |
-           Literal Char |
-           Or Reg Reg |
-           Concat Reg Reg |
-           Star Reg
-           deriving Eq
+data Reg = Epsilon
+         | Literal Char
+         | Or Reg Reg
+         | Concat Reg Reg
+         | Star Reg
+    deriving Eq
 
 
 showReg :: Reg -> [Char]
 showReg Epsilon        = "@"
 showReg (Literal c)    = [c]
 showReg (Or r1 r2)     = "(" ++ showReg r1 ++  "|" ++ showReg r2 ++ ")"
-showReg (Concat r1 r2)   = "(" ++ showReg r1 ++ showReg r2 ++ ")"
+showReg (Concat r1 r2) = "(" ++ showReg r1 ++ showReg r2 ++ ")"
 showReg (Star r)       = showReg r ++ "*"
 
 
@@ -69,10 +69,10 @@ eval = evalPostfix . toPostfix
 
 
 data Nfa a = NFA (Set a) (Set (Move a)) a (Set a)
-                deriving (Eq, Show)
+    deriving (Eq, Show)
 data Move a = Move a Char a
             | Emove a a
-                deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show)
 
 
 -- | Map a state to a new graph
@@ -97,8 +97,8 @@ nfaUnion (NFA states1 moves1 start1 finish1) (NFA states2 moves2 start2 finish2)
           where
             m1 = size states1
             m2 = size states2
-            moves1' = mapMonotonic (renumber_move 1)        moves1
-            moves2' = mapMonotonic (renumber_move (m1 + 1)) moves2
+            moves1'  = mapMonotonic (renumber_move 1)        moves1
+            moves2'  = mapMonotonic (renumber_move (m1 + 1)) moves2
             newmoves = fromList [Emove 0 1,
                                 Emove 0 (m1 + 1),
                                 Emove m1 (m1 + m2 + 1),
@@ -116,8 +116,8 @@ nfaConcat (NFA states1 moves1 start1 finish1) (NFA states2 moves2 start2 finish2
           where
             m1 = size states1
             m2 = size states2
-            moves1' = moves1
-            moves2' = mapMonotonic (renumber_move m1) moves2
+            moves1'  = moves1
+            moves2'  = mapMonotonic (renumber_move m1) moves2
             newmoves = singleton (Emove (m1 - 1) m1)
 
 
@@ -131,7 +131,7 @@ nfaStar (NFA states1 moves1 start1 finish1)
           (fromList [m1, m1 + 1])
           where
             m1 = size states1
-            moves1' = mapMonotonic (renumber_move 1) moves1
+            moves1'  = mapMonotonic (renumber_move 1) moves1
             newmoves = fromList [Emove 0 1,
                                  Emove m1 1,
                                  Emove m1 (m1 + 1),
@@ -144,3 +144,4 @@ build (Literal c)    = NFA (fromList [0, 1]) (singleton (Move 0 c 1)) 0 (singlet
 build (Or r1 r2)     = nfaUnion (build r1) (build r2)
 build (Concat r1 r2) = nfaConcat (build r1) (build r2)
 build (Star r)       = nfaStar (build r)
+
