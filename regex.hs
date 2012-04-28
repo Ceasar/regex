@@ -118,7 +118,24 @@ nfaConcat (NFA states1 moves1 start1 finish1) (NFA states2 moves2 start2 finish2
             m2 = size states2
             moves1' = moves1
             moves2' = mapMonotonic (renumber_move m1) moves2
-            newmoves = singleton (Emove m1 (m1 + 1))
+            newmoves = singleton (Emove (m1 - 1) m1)
+
+
+-- | Transform an NFA which recognizes language L1 to a new NFA
+-- which recognizes L1*
+nfaStar :: Nfa Int -> Nfa Int
+nfaStar (NFA states1 moves1 start1 finish1)
+    = NFA (fromList [0..(m1 + 1)])
+          (moves1' `union` newmoves)
+          0
+          (fromList [m1, m1 + 1])
+          where
+            m1 = size states1
+            moves1' = mapMonotonic (renumber_move 1) moves1
+            newmoves = fromList [Emove 0 1,
+                                 Emove m1 1,
+                                 Emove m1 (m1 + 1),
+                                 Emove (m1 + 1) 0]
 
 
 -- | Build a NFA from a regular expression
@@ -126,4 +143,4 @@ build :: Reg -> Nfa Int
 build (Literal c)    = NFA (fromList [0, 1]) (singleton (Move 0 c 1)) 0 (singleton 1)
 build (Or r1 r2)     = nfaUnion (build r1) (build r2)
 build (Concat r1 r2) = nfaConcat (build r1) (build r2)
--- build (Star r) = m_star (build r)
+build (Star r)       = nfaStar (build r)
