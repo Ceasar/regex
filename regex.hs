@@ -80,24 +80,23 @@ renumber :: (Num a) => a -> a -> a
 renumber i = (+ i)
 
 
--- | Map a move to a larger graph
+-- | Map a transition to a larger graph
 renumber_move :: (Num a) => a -> Move a -> Move a
 renumber_move i (Move a c b) = (Move (a + i) c (b + i))
 renumber_move i (Emove a b)  = (Emove (a + i) (b + i))
 
 
-m_or :: Nfa Int -> Nfa Int -> Nfa Int
-m_or (NFA states1 moves1 start1 finish1) (NFA states2 moves2 start2 finish2)
-    = NFA (states1' `union` states2' `union` newstates)
+-- | Combine two NFAs which recognize languages L1 and L2 to form a new
+-- NFA which recognizes L1 | L2.
+nfaUnion :: Nfa Int -> Nfa Int -> Nfa Int
+nfaUnion (NFA states1 moves1 start1 finish1) (NFA states2 moves2 start2 finish2)
+    = NFA (fromList [0..(m1+m2+1)])
           (moves1' `union` moves2' `union` newmoves)
           0
           (singleton (m1 + m2 + 1))
           where
             m1 = size states1
             m2 = size states2
-            states1' = mapMonotonic (renumber 1)        states1
-            states2' = mapMonotonic (renumber (m1 + 1)) states2
-            newstates = fromList [0..(m1 + m2 + 1)]
             moves1' = mapMonotonic (renumber_move 1)        moves1
             moves2' = mapMonotonic (renumber_move (m1 + 1)) moves2
             newmoves = fromList [Emove 0 1,
@@ -106,8 +105,25 @@ m_or (NFA states1 moves1 start1 finish1) (NFA states2 moves2 start2 finish2)
                                 Emove (m1 + m2) (m1 + m2 + 1)]
 
 
+-- | Combine two NFAs which recognize languages L1 and L2 to form a new
+-- NFA which recognizes L1 + L2.
+nfaConcat :: Nfa Int -> Nfa Int -> Nfa Int
+nfaConcat (NFA states1 moves1 start1 finish1) (NFA states2 moves2 start2 finish2)
+    = NFA (fromList [0..(m1 + m2 - 1)])
+          (moves1' `union` moves2' `union` newmoves)
+          0
+          (singleton (m1 + m2 - 1))
+          where
+            m1 = size states1
+            m2 = size states2
+            moves1' = moves1
+            moves2' = mapMonotonic (renumber_move m1) moves2
+            newmoves = singleton (Emove m1 (m1 + 1))
+
+
+-- | Build a NFA from a regular expression
 build :: Reg -> Nfa Int
-build (Literal c) = NFA (fromList [0, 1]) (singleton (Move 0 c 1)) 0 (singleton 1)
-build (Or r1 r2) = m_or (build r1) (build r2)
--- build (Then r1 r2) = m_then (build r1) (build r2)
+build (Literal c)    = NFA (fromList [0, 1]) (singleton (Move 0 c 1)) 0 (singleton 1)
+build (Or r1 r2)     = nfaUnion (build r1) (build r2)
+build (Concat r1 r2) = nfaConcat (build r1) (build r2)
 -- build (Star r) = m_star (build r)
