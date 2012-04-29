@@ -4,6 +4,51 @@ import Data.List hiding (union)
 import Data.Set as S
 
 
+data Nfa a = NFA (Set a) (Set (Move a)) a (Set a)
+    deriving (Eq, Show)
+data Move a = Move a Char a
+            | Emove a a
+    deriving (Eq, Ord, Show)
+
+
+-- Keep iterating until a static set remains
+setlimit :: Eq a => (Set a -> Set a) -> Set a -> Set a
+setlimit f s
+    | s == next = s
+    | otherwise = setlimit f next
+      where
+        next = f s
+
+
+-- | Compute the set of states reachable from epsilon transitions
+closure :: Ord a => Nfa a -> Set a -> Set a
+closure (NFA _ moves _ _) = setlimit add
+  where
+    add states = union states accessible
+      where
+        accessible = fromList [s | x <- toList states, Emove y s <- toList moves, y == x]
+
+
+-- | Compute the set of states reachable from symbolic transitions
+onemove :: Ord a => Nfa a -> Char -> Set a -> Set a
+onemove (NFA _ ms _ _) c x = fromList [s | t <- toList x, Move z d s <- toList ms, z == t, c == d]
+
+
+-- | Compute the state of the machine after a single transition
+onetrans :: Ord a => Nfa a -> Set a -> Char -> Set a
+onetrans m x c = closure m (onemove m c x)
+
+
+-- | Compute the final state of an NFA on a string
+trans :: Ord a => Nfa a -> String -> Set a
+trans m@(NFA _ _ q _) = foldl (onetrans m) (closure m (singleton q))
+
+
+-- | Check if a NFA accepts a word
+accepts :: Ord a => Nfa a -> String -> Bool
+accepts m@(NFA qs ms q fs) = not . S.null . S.intersection fs . trans m
+
+
 data Reg = Epsilon
          | Literal Char
          | Or Reg Reg
@@ -70,60 +115,6 @@ eval :: String -> Reg
 eval = evalPostfix . toPostfix
 
 
-data Nfa a = NFA (Set a) (Set (Move a)) a (Set a)
-    deriving (Eq, Show)
-data Move a = Move a Char a
-            | Emove a a
-    deriving (Eq, Ord, Show)
-
-
--- | Get all of the transitions of a state
-out :: Ord a => Set (Move a) -> a -> Set (Move a)
-out moves q = S.filter pred moves
-  where
-    pred (Move u _ _) = q == u
-    pred (Emove u _) = q == u
-
-
--- | Check if a transition is an epsilon transition
-isEpsilon :: Move a -> Bool
-isEpsilon (Move _ _ _) = False
-isEpsilon (Emove _ _) = True
-
-
--- | Get all of the epsilon transitions of a state
-ep :: Ord a => Nfa a -> a -> Set (Move a)
-ep (NFA _ ms _ _) = S.filter isEpsilon . out ms
-
-
--- | Get the transition function of an nfa
-delta :: Ord a => Set (Move a) -> a -> Char -> Set a
-delta ms state char = S.fold comb S.empty ms
-    where
-        comb (Move u d v) vs
-            | u == state && d == char = S.insert v vs
-            | otherwise = vs
-        comb (Emove u v) vs
-            | u == state = S.insert v vs
-            | otherwise = vs
-
-
--- >>= for Sets.
-bindSet :: (Ord a, Ord b) => Set a -> (a -> Set b) -> Set b
-bindSet s k = S.unions . S.toList $ S.map k s
-
-
--- foldM for Sets.
-foldSet :: (Ord a ) => (a -> b -> Set a) -> a -> [b] -> Set a
-foldSet _ a []     = S.singleton a
-foldSet f a (x:xs) = bindSet (f a x) (\fax -> foldSet f fax xs)
-
-
--- | Check if a NFA accepts a word
-accepts :: Ord a => Nfa a -> String -> Bool
-accepts (NFA qs ms q fs) = not . S.null . S.intersection fs . foldSet (delta ms) q
-
-
 -- | Map a state to a new graph
 renumber :: (Num a) => a -> a -> a
 renumber i = (+ i)
@@ -177,14 +168,14 @@ nfaStar (NFA states1 moves1 start1 finish1)
     = NFA (fromList [0..(m1 + 1)])
           (moves1' `union` newmoves)
           0
-          (fromList [m1, m1 + 1])
+          (fromList [m1 + 1])
           where
             m1 = size states1
             moves1'  = mapMonotonic (renumber_move 1) moves1
             newmoves = fromList [Emove 0 1,
+                                 Emove 0 (m1 + 1),
                                  Emove m1 1,
-                                 Emove m1 (m1 + 1),
-                                 Emove (m1 + 1) 0]
+                                 Emove m1 (m1 + 1)]
 
 
 -- | Build a NFA from a regular expression
