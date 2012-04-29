@@ -1,7 +1,7 @@
 import Control.Monad
 import Data.Char
 import Data.List hiding (union)
-import Data.Set
+import Data.Set as S
 
 
 data Reg = Epsilon
@@ -12,6 +12,7 @@ data Reg = Epsilon
     deriving Eq
 
 
+-- | Display a human-readable regex
 showReg :: Reg -> [Char]
 showReg Epsilon        = "@"
 showReg (Literal c)    = [c]
@@ -24,6 +25,7 @@ instance Show Reg where
     show = showReg
 
 
+-- | Convert a postfix regex expression into a parse tree
 evalPostfix :: String -> Reg
 evalPostfix = head . foldl comb []
     where
@@ -73,6 +75,53 @@ data Nfa a = NFA (Set a) (Set (Move a)) a (Set a)
 data Move a = Move a Char a
             | Emove a a
     deriving (Eq, Ord, Show)
+
+
+-- | Get all of the transitions of a state
+out :: Ord a => Set (Move a) -> a -> Set (Move a)
+out moves q = S.filter pred moves
+  where
+    pred (Move u _ _) = q == u
+    pred (Emove u _) = q == u
+
+
+-- | Check if a transition is an epsilon transition
+isEpsilon :: Move a -> Bool
+isEpsilon (Move _ _ _) = False
+isEpsilon (Emove _ _) = True
+
+
+-- | Get all of the epsilon transitions of a state
+ep :: Ord a => Nfa a -> a -> Set (Move a)
+ep (NFA _ ms _ _) = S.filter isEpsilon . out ms
+
+
+-- | Get the transition function of an nfa
+delta :: Ord a => Set (Move a) -> a -> Char -> Set a
+delta ms state char = S.fold comb S.empty ms
+    where
+        comb (Move u d v) vs
+            | u == state && d == char = S.insert v vs
+            | otherwise = vs
+        comb (Emove u v) vs
+            | u == state = S.insert v vs
+            | otherwise = vs
+
+
+-- >>= for Sets.
+bindSet :: (Ord a, Ord b) => Set a -> (a -> Set b) -> Set b
+bindSet s k = S.unions . S.toList $ S.map k s
+
+
+-- foldM for Sets.
+foldSet :: (Ord a ) => (a -> b -> Set a) -> a -> [b] -> Set a
+foldSet _ a []     = S.singleton a
+foldSet f a (x:xs) = bindSet (f a x) (\fax -> foldSet f fax xs)
+
+
+-- | Check if a NFA accepts a word
+accepts :: Ord a => Nfa a -> String -> Bool
+accepts (NFA qs ms q fs) = not . S.null . S.intersection fs . foldSet (delta ms) q
 
 
 -- | Map a state to a new graph
@@ -145,3 +194,7 @@ build (Or r1 r2)     = nfaUnion (build r1) (build r2)
 build (Concat r1 r2) = nfaConcat (build r1) (build r2)
 build (Star r)       = nfaStar (build r)
 
+
+-- | Check if a regex matches a word
+matches :: String -> String -> Bool
+matches s = accepts (build (eval s))
