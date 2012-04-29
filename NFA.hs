@@ -6,6 +6,7 @@ import Data.Set as S
 
 data Nfa a = NFA (Set a) (Set (Move a)) a (Set a)
     deriving (Eq, Show)
+
 data Move a = Move a Char a
             | Emove a a
     deriving (Eq, Ord, Show)
@@ -51,7 +52,7 @@ accepts m@(NFA qs ms q fs) = not . S.null . S.intersection fs . run m
 
 -- | Map a state to a new graph
 renumber :: (Num a) => a -> a -> a
-renumber i = (+ i)
+renumber = (+)
 
 
 -- | Map a transition to a larger graph
