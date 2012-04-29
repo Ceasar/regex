@@ -1,6 +1,6 @@
-import Control.Monad
-import Data.Char
-import Data.List hiding (union)
+module NFA (Nfa(NFA), Move(Move, Emove), run, accepts, nfaUnion, nfaConcat, nfaStar) where
+
+
 import Data.Set as S
 
 
@@ -40,79 +40,13 @@ onetrans m x c = closure m (onemove m c x)
 
 
 -- | Compute the final state of an NFA on a string
-trans :: Ord a => Nfa a -> String -> Set a
-trans m@(NFA _ _ q _) = foldl (onetrans m) (closure m (singleton q))
+run :: Ord a => Nfa a -> String -> Set a
+run m@(NFA _ _ q _) = foldl (onetrans m) (closure m (singleton q))
 
 
 -- | Check if a NFA accepts a word
 accepts :: Ord a => Nfa a -> String -> Bool
-accepts m@(NFA qs ms q fs) = not . S.null . S.intersection fs . trans m
-
-
-data Reg = Epsilon
-         | Literal Char
-         | Or Reg Reg
-         | Concat Reg Reg
-         | Star Reg
-    deriving Eq
-
-
--- | Display a human-readable regex
-showReg :: Reg -> [Char]
-showReg Epsilon        = "@"
-showReg (Literal c)    = [c]
-showReg (Or r1 r2)     = "(" ++ showReg r1 ++  "|" ++ showReg r2 ++ ")"
-showReg (Concat r1 r2) = "(" ++ showReg r1 ++ showReg r2 ++ ")"
-showReg (Star r)       = showReg r ++ "*"
-
-
-instance Show Reg where
-    show = showReg
-
-
--- | Convert a postfix regex expression into a parse tree
-evalPostfix :: String -> Reg
-evalPostfix = head . foldl comb []
-    where
-        comb :: [Reg] -> Char -> [Reg]
-        comb (x:y:ys) '|'   = (Or y x) : ys
-        comb (x:y:ys) '&'   = (Concat y x) : ys
-        comb (x:xs) '*'     = (Star x) : xs
-        comb xs '@'         = Epsilon : xs
-        comb xs s           = (Literal s) : xs
-
-
--- | Apply the shunting-yard algorithm to turn an infix expression
--- into a postfix expression.
--- Regexs must used implicit concatenations
-shunt :: String -> String -> String -> String
-shunt o p [] = (reverse o) ++ p
-shunt o [] (x:xs)
-    | x == '(' = shunt o [x] xs
-    | x == '|' = shunt o [x] xs
-    | x == '&' = shunt o [x] xs
-    | x == '*' = shunt (x:o) [] xs
-    | otherwise = shunt (x:o) [] xs
-shunt o (p:ps) (x:xs)
-    | x == '(' = shunt o (x:p:ps) xs
-    | x == ')' = case (span (/= '(') (p:ps)) of
-        (as, b:bs) -> shunt (as ++ o) bs xs
-    | x == '|' = case (p) of
-        '(' -> shunt o (x:p:ps) xs
-        otherwise -> shunt (p:o) (x:ps) xs
-    | x == '&' = shunt (o) (x:p:ps) xs
-    | x == '*' = shunt (x:o) (p:ps) xs
-    | otherwise = shunt (x:o) (p:ps) xs
-
-
--- | Convert an infix expression to postfix
-toPostfix :: String -> String
-toPostfix = shunt [] []
-
-
--- | Evaluate an infix expression
-eval :: String -> Reg
-eval = evalPostfix . toPostfix
+accepts m@(NFA qs ms q fs) = not . S.null . S.intersection fs . run m
 
 
 -- | Map a state to a new graph
@@ -176,16 +110,3 @@ nfaStar (NFA states1 moves1 start1 finish1)
                                  Emove 0 (m1 + 1),
                                  Emove m1 1,
                                  Emove m1 (m1 + 1)]
-
-
--- | Build a NFA from a regular expression
-build :: Reg -> Nfa Int
-build (Literal c)    = NFA (fromList [0, 1]) (singleton (Move 0 c 1)) 0 (singleton 1)
-build (Or r1 r2)     = nfaUnion (build r1) (build r2)
-build (Concat r1 r2) = nfaConcat (build r1) (build r2)
-build (Star r)       = nfaStar (build r)
-
-
--- | Check if a regex matches a word
-matches :: String -> String -> Bool
-matches s = accepts (build (eval s))
