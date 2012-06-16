@@ -12,7 +12,7 @@ data Move a = Move a Char a
     deriving (Eq, Ord, Show)
 
 
--- Keep iterating until a static set remains
+-- | Keep iterating until a static set remains
 setlimit :: Eq a => (Set a -> Set a) -> Set a -> Set a
 setlimit f s
     | s == next = s
@@ -42,7 +42,7 @@ onetrans m x c = closure m (onemove m c x)
 
 -- | Compute the final state of an NFA on a string
 run :: Ord a => Nfa a -> String -> Set a
-run m@(NFA _ _ q _) = foldl (onetrans m) (closure m (singleton q))
+run m@(NFA _ _ q _) = Prelude.foldl (onetrans m) (closure m (singleton q))
 
 
 -- | Check if a NFA accepts a word

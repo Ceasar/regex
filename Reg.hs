@@ -6,6 +6,8 @@ import Data.Set as S
 import NFA
 
 
+type InfixExpr = String
+type PostfixExpr = String
 data Reg = Epsilon
          | Literal Char
          | Or Reg Reg
@@ -14,7 +16,7 @@ data Reg = Epsilon
     deriving Eq
 
 
--- | Display a human-readable regex
+-- | Display a human-readable regular expression.
 showReg :: Reg -> [Char]
 showReg Epsilon        = "@"
 showReg (Literal c)    = [c]
@@ -28,8 +30,8 @@ instance Show Reg where
 
 
 -- | Convert a postfix regex expression into a parse tree
-evalPostfix :: String -> Reg
-evalPostfix = head . foldl comb []
+evalPostfix :: PostfixExpr -> Reg
+evalPostfix = head . Prelude.foldl comb []
     where
         comb :: [Reg] -> Char -> [Reg]
         comb (x:y:ys) '|'   = (Or y x) : ys
@@ -40,9 +42,9 @@ evalPostfix = head . foldl comb []
 
 
 -- | Apply the shunting-yard algorithm to turn an infix expression
--- into a postfix expression.
--- Regexs must used implicit concatenations
-shunt :: String -> String -> String -> String
+-- | into a postfix expression.
+-- | Regexs must use implicit concatenations
+shunt :: [Char] -> [Char] -> InfixExpr -> PostfixExpr
 shunt o p [] = (reverse o) ++ p
 shunt o [] (x:xs)
     | x == '(' = shunt o [x] xs
@@ -63,12 +65,12 @@ shunt o (p:ps) (x:xs)
 
 
 -- | Convert an infix expression to postfix
-toPostfix :: String -> String
+toPostfix :: InfixExpr -> PostfixExpr
 toPostfix = shunt [] []
 
 
 -- | Evaluate an infix expression
-eval :: String -> Reg
+eval :: InfixExpr -> Reg
 eval = evalPostfix . toPostfix
 
 
