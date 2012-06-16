@@ -30,7 +30,7 @@ One can build an NFA and then check if a it recognizes a word.
     *NFA> m `accepts` "b"
     False
 
-One can also combine NFAs to form move complex NFAs.
+One can also combine NFAs to form more complex NFAs.
 
     *NFA> let n = NFA (fromList [0, 1]) (singleton (Move 0 'b' 1)) 0 (singleton 1)
     *NFA> let mn = nfaUnion m n
@@ -44,9 +44,9 @@ One can also combine NFAs to form move complex NFAs.
 RegExs
 ------
 
-A regular expression is a concise and flexible means to specifcy and recognize string of text.
+A regular expression is a concise and flexible means to specify and recognize strings of text.
 
-We define Regular Expressions as one of five objects.
+We define Regular Expressions as one of five components.
 
     data Reg = Epsilon
              | Literal Char
@@ -59,19 +59,19 @@ These components can be put together to form regular expressions.
     *Reg> Or (Literal 'a') (Literal 'b')
     (a|b)
 
-Alternatively one can just convert directly from strings. Note however, that Concat must be explicility specified.
+Alternatively one can create a regular directly from a string. Note, however, that Concat must be explicitly specified.
 
     *Reg> eval "(a|b)"
     (a|b)
     *Reg> eval "((a&b)|(b&c))"
     ((ab)|(bc))
 
-You can also convert RegExs to NFAs like the kind we had before.
+One can also convert RegExs to NFAs like the kind we had before.
 
     *Reg> build (eval "(a|b)")
     NFA (fromList [0,1,2,3,4,5]) (fromList [Move 1 'a' 2,Move 3 'b' 4,Emove 0 1,Emove 0 3,Emove 2 5,Emove 4 5]) 0 (fromList [5])
 
-Lastly, you can use RegExs to match Strings.
+Lastly, one can use RegExs to match Strings.
 
     *Reg> matches "(a|b)" "a"
     True
