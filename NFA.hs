@@ -1,48 +1,78 @@
-module NFA (Nfa(NFA), run, accepts, {-nfaUnion, nfaConcat, nfaStar-}) where
+module NFA (Nfa(NFA), State, run, accepts, {-nfaUnion, nfaConcat, nfaStar-}) where
 
 
 import Data.Set as S
 
 type State = Int
 
-data Nfa = NFA  (Set State) -- Set of states
-                (Maybe Char -> State -> Set State) -- Relation
-                State -- Starting state
-                (Set State) -- Final states
+data ST a = S (State -> (a, State))
+
+instance Monad ST where
+    -- return :: a -> ST a
+    return x   = S (\s -> (x,s))
+
+    -- (>>=)  :: ST a -> (a -> ST b) -> ST b
+    st >>= f   = S (\s -> let (x,s') = apply st s in apply (f x) s')
+        where
+            apply        :: ST a -> State -> (a,State)
+            apply (S h) = h
+
+data Nfa = NFA  {   states   :: Set State, -- Set of states
+                    relation :: Maybe Char -> State -> Set State, -- Relation
+                    current  :: Set State, -- Current states
+                    finals   :: Set State -- Final states
+                }
 
 
--- | Keep iterating until a static set remains
-setlimit :: (Set State -> Set State) -> Set State -> Set State
-setlimit f s
-    | s == next = s
-    | otherwise = setlimit f next
-      where
-        next = f s
+testNFA :: Nfa
+testNFA = NFA (fromList [0, 1, 2]) r (singleton 0) (singleton 1)
+    where
+        r :: Maybe Char -> State -> Set State
+        r (Just 'a') 0 = singleton 1
+        r (Just 'b') 0 = singleton 0
+        r (Just 'a') 1 = singleton 1
+        r (Just 'b') 1 = singleton 0
+        r _ _ = singleton 2
+
+{-
+instance Monad Nfa where
+    return x = undefined
+    m >>= f =  undefined
+-}
+
+instance Show Nfa where
+    show (NFA qs _ q fs) = concat ["NFA ", show qs, ",", show q, ",", show fs]
 
 
 -- | Compute the set of states reachable from epsilon transitions
-closure :: Nfa -> Set State -> Set State
-closure (NFA _ f _ _) qs = setlimit (S.fold (S.union . f Nothing) qs) qs
-
-
--- | Compute the set of states reachable from symbolic transitions
-onemove :: Nfa -> Char -> Set State -> Set State
-onemove (NFA _ f _ _) c = S.fold (S.union . f (Just c) ) S.empty
+closure :: Nfa -> Nfa
+closure (NFA qs f q fs) = NFA qs f q' fs
+    where
+        -- | Keep iterating until a static set remains
+        setlimit :: (Set State -> Set State) -> Set State -> Set State
+        setlimit g s
+            | s == next = s
+            | otherwise = setlimit g next
+              where
+                next = g s
+        q' = setlimit (S.fold (S.union . f Nothing) q) q
 
 
 -- | Compute the state of the machine after a single transition
-onetrans ::  Nfa -> Set State -> Char -> Set State
-onetrans m x c = closure m (onemove m c x)
+onetrans ::  Char -> Nfa -> Nfa
+onetrans c (NFA qs f q fs) = closure $ NFA qs f q' fs
+    where
+        q' = S.fold (S.union . f (Just c) ) S.empty q
 
 
 -- | Compute the final state of an NFA on a string
-run :: Nfa -> String -> Set State
-run m@(NFA _ _ q _) = Prelude.foldl (onetrans m) (closure m (singleton q))
+run :: Nfa -> String -> Nfa
+run m = Prelude.foldr onetrans (closure m)
 
 
 -- | Check if a NFA accepts a word
 accepts :: Nfa -> String -> Bool
-accepts m@(NFA _ _ _ fs) = not . S.null . S.intersection fs . run m
+accepts m@(NFA _ _ _ fs) = not . S.null . S.intersection fs . current . run m
 
 
 {-
